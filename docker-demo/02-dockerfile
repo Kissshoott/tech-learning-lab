@@ -1,0 +1,33 @@
+# ===== 基础 Dockerfile =====
+# 用 Node.js 应用演示每条指令的含义
+
+# FROM：指定基础镜像，所有 Dockerfile 必须以此开头
+# 选择 alpine 版本因为体积小（~5MB vs debian 的 ~100MB）
+FROM node:22-alpine
+
+# WORKDIR：设置工作目录，后续命令都在这个目录下执行
+# 如果目录不存在会自动创建
+WORKDIR /app
+
+# COPY：把文件从宿主机复制到镜像中
+# 先复制 package.json，利用层缓存：只要依赖没变，这层就不会重新构建
+COPY package.json .
+
+# RUN：在构建时执行命令
+# 单独安装依赖，和上面的 COPY 配合实现依赖缓存
+RUN npm install --production
+
+# COPY 剩余源码
+COPY . .
+
+# EXPOSE：声明容器运行时监听的端口（仅作文档说明，实际映射靠 -p）
+EXPOSE 3000
+
+# CMD：容器启动时执行的命令
+# 用 exec 格式（JSON 数组），不用 shell 格式，避免信号传递问题
+CMD ["node", "server.js"]
+
+# ===== 构建和运行 =====
+# docker build -t node-app:1.0 .
+# docker run -d -p 3000:3000 --name my-app node-app:1.0
+# curl http://localhost:3000  →  Hello from Docker!
