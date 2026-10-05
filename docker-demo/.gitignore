@@ -1,0 +1,24 @@
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+
+# Build outputs
+target/
+*.jar
+*.class
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker volumes (if bind mount used)
+mysql-data/
+redis-data/
+
+# Environment files
+.env
+*.env

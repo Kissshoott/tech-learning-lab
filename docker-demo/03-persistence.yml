@@ -1,0 +1,38 @@
+# ===== M3: 数据持久化演示 =====
+# MySQL 容器 + Volume，验证容器删除后数据不丢失
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: persist-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: testdb
+    ports:
+      - "3307:3306"
+    volumes:
+      # 命名卷：数据存储在 Docker 管理的位置（Linux: /var/lib/docker/volumes/）
+      # 容器删除后数据保留，只有手动 docker volume rm 才会丢
+      - mysql-data:/var/lib/mysql
+
+      # Bind Mount（可选）：直接映射宿主机目录，开发时方便查看数据文件
+      # - ./mysql-data:/var/lib/mysql
+    networks:
+      - persist-net
+
+volumes:
+  mysql-data:
+    # 声明命名卷，docker-compose up 时自动创建
+
+networks:
+  persist-net:
+    driver: bridge
+
+# ===== 验证步骤 =====
+# 1. docker-compose up -d
+# 2. 用任意 MySQL 客户端连接 localhost:3307 (root/root123)
+# 3. 创建表并插入数据
+# 4. docker-compose down（注意：不加 -v，数据卷不会被删除）
+# 5. docker-compose up -d（重新启动）
+# 6. 再次连接 MySQL，数据还在！
+# 7. 如果要彻底清理：docker-compose down -v
