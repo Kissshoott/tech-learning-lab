@@ -20,7 +20,8 @@
 
 | 技术 | 目录 | 核心内容 | 状态 |
 |------|------|---------|------|
-| **Docker** | `docker-demo/` | 镜像容器、Dockerfile、持久化、网络、多服务编排、运维调试 | 已完成 |
+| **Docker** | `docker-demo/` | 镜像容器、Dockerfile、持久化、网络、多服务编排、运维调试 | ✅ 已完成 |
+| **Milvus** | `milvus-demo/` | Schema 设计、CRUD、索引搜索、混合过滤、Spring AI RAG 集成、Attu 监控 | ✅ 已完成 |
 
 ## License
 
