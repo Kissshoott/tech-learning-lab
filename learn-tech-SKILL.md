@@ -35,7 +35,7 @@ description: 快速学习新技术的方法论工作流。按6步执行：环境
 
 **搜索要求**：使用 WebSearch 搜索 `"<技术名> install 2024 2025"` 获取最新安装方式，不凭记忆写。
 
-这一步的内容放在教学文档 README.md 的最前面（模块1之前），标题为 `## 环境搭建`。
+这一步的内容放在教学文档 README.md 的最前面（M1之前），标题为 `## 环境搭建`。
 
 ### 第1步：技术背景与选型对比
 
@@ -110,7 +110,7 @@ description: 快速学习新技术的方法论工作流。按6步执行：环境
 ### 平台差异/常见坑
 [Windows/macOS/Linux 差异、前置依赖、额外配置]
 
-## 模块1：<名称>
+## M1：<名称>
 ### 概念解释
 [这个功能是什么，为什么这样设计]
 ### 核心语法/命令/配置
@@ -123,7 +123,7 @@ description: 快速学习新技术的方法论工作流。按6步执行：环境
 [用 <details> 折叠的实践问答，来自用户动手操作中产生的疑问]
 > 📂 对应代码：`code/01-<name>/` 或 `code/xxx.sh`
 
-## 模块2：<名称>
+## M2：<名称>
 ...（同上结构）
 > 📂 对应代码：`code/02-<name>/`
 ```
@@ -138,12 +138,12 @@ description: 快速学习新技术的方法论工作流。按6步执行：环境
 ```
 <tech>-demo/
 ├── README.md                    # 完整教学文档（Part 1）
-├── 01-basic-commands.sh         # 模块1的代码
-├── 02-app.Dockerfile            # 模块2的代码
+├── 01-basic-commands.sh         # M1的代码
+├── 02-app.Dockerfile            # M2的代码
 ├── 02-multi-stage.Dockerfile
-├── 03-persistence.yml           # 模块3的代码
-├── 04-networking.yml            # 模块4的代码
-├── 05-ops-commands.sh           # 模块5的代码
+├── 03-persistence.yml           # M3的代码
+├── 04-networking.yml            # M4的代码
+├── 05-ops-commands.sh           # M5的代码
 └── 06-full-demo/                # 综合Demo，代码量显著不同，单独目录
     ├── ...
     └── ...
@@ -153,9 +153,9 @@ description: 快速学习新技术的方法论工作流。按6步执行：环境
 ```
 <tech>-demo/
 ├── README.md                    # 完整教学文档（Part 1）
-├── 01-<module-name>/            # 模块1的代码
+├── 01-<module-name>/            # M1的代码
 │   └── ...
-├── 02-<module-name>/            # 模块2的代码
+├── 02-<module-name>/            # M2的代码
 │   └── ...
 └── 03-full-demo/                # 综合Demo
     └── ...
