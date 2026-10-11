@@ -1,0 +1,51 @@
+Milvus 向量数据库核心概念
+
+Milvus 是一款专为 AI 应用设计的开源向量数据库。它的核心功能是高维向量的毫秒级相似性搜索。在 RAG（检索增强生成）系统中，Milvus 负责存储文档的 Embedding 向量，并在用户提问时快速找到最相关的文档片段。
+
+Milvus 的架构采用存算分离设计，由三个核心组件组成：计算层（Proxy 和各类 Node）、存储层（对象存储如 MinIO）、协调层（etcd 负责元数据，Pulsar/Kafka 负责日志）。这种设计使得 Milvus 可以独立扩展计算和存储资源。
+
+Collection 是 Milvus 中的数据表，每个 Collection 有固定的 Schema。Schema 必须包含一个主键字段和一个向量字段，可以有多个标量字段。Collection 创建后不能修改已有字段，但可以添加新字段。
+
+HNSW 索引原理
+
+HNSW（Hierarchical Navigable Small World）是目前最主流的向量索引算法之一。它基于分层可导航小世界图结构，通过多层跳表实现从粗到细的搜索。
+
+HNSW 的核心参数有两个：M 控制每个节点的最大邻居数，efConstruction 控制构建时的搜索范围。M 越大、efConstruction 越大，索引质量越好，但构建时间和内存占用也越高。
+
+搜索时的关键参数是 ef（等效于搜索时的候选列表大小）。ef 越大，搜索结果越精确，但速度越慢。通常建议 ef 设置为 topK 的 2~4 倍。
+
+Spring AI 向量存储抽象
+
+Spring AI 提供了 VectorStore 接口作为向量数据库的统一抽象。开发者不需要关心底层是 Milvus、Qdrant 还是其他向量数据库，只需要调用 add() 存储文档、similaritySearch() 检索相似文档。
+
+Spring AI 的 Milvus VectorStore 实现会自动处理以下事情：将 Document 通过 EmbeddingModel 转成向量，将向量和文档内容写入 Milvus，检索时自动将 query 向量化并搜索。开发者只需要关注业务逻辑。
+
+RAG 检索增强生成
+
+RAG（Retrieval-Augmented Generation）是当前最主流的 AI 应用架构。它的核心思想是：先从知识库中检索相关文档，再将文档内容注入到 LLM 的 Prompt 中，让 LLM 基于这些上下文信息生成回答。
+
+RAG 的优势在于：不需要微调模型就能让 LLM 使用私有知识，减少了幻觉（Hallucination），知识库可以随时更新而不需要重新训练模型。
+
+RAG 的关键环节包括：文档分块（Chunking）策略、Embedding 模型选择、向量检索的精度和召回率、Prompt 工程。其中文档分块策略直接影响检索效果，通常建议 512~1024 token 一块，块之间保留 10%~20% 的重叠。
+
+向量搜索的距离度量
+
+常用的向量距离度量有三种：余弦相似度（COSINE）、欧氏距离（L2）、内积（IP）。
+
+余弦相似度衡量两个向量方向的相似性，值域为 [-1, 1]，值越大越相似。对于已经归一化的向量，余弦相似度等价于内积。文本 Embedding 通常使用余弦相似度。
+
+欧氏距离衡量两个向量在空间中的直线距离，值越小越相似。适合图像特征等未归一化的向量。
+
+内积是向量各维度对应相乘再求和。对于归一化向量，内积等价于余弦相似度。对于未归一化向量，内积同时考虑了方向和模长。
+
+Milvus 生产环境调优
+
+生产环境中，Milvus 的性能调优主要关注以下几个方面：
+
+索引选择：数据量小于 100 万可以用 FLAT（精确搜索），百万到千万级用 IVF_FLAT 或 IVF_SQ8，对精度要求高且内存充足用 HNSW。
+
+资源分配：Query Node 主要消耗内存（需要加载索引和数据），Index Node 主要消耗 CPU（构建索引）。Standalone 模式下建议至少分配 8GB 内存。
+
+一致性等级：Strong 保证写入立即可读但性能差，Bounded（默认）有毫秒级延迟但性能好，Session 保证同一客户端的写后读，Eventually 延迟秒级但吞吐最高。
+
+分区策略：按业务维度（如租户 ID、文档类别）创建 Partition，搜索时指定 Partition 可以跳过无关数据，显著提升性能。
