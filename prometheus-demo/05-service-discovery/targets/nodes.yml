@@ -1,0 +1,43 @@
+# 文件服务发现 - 目标文件示例
+#
+# 格式说明：
+#   - targets:  目标地址列表，格式为 "主机名:端口" 或 "IP:端口"
+#   - labels:   附加标签，会合并到该组所有目标的每个指标上
+#               相当于给这些目标统一打上环境/角色/团队等标记
+#
+# Prometheus 通过 file_sd_configs 加载此文件后，
+# 会自动为每个 target 生成 up、node_cpu_seconds_total 等指标，
+# 并附带下方 labels 中定义的标签。
+#
+# 修改此文件后无需重启 Prometheus，
+# 等待 refresh_interval（当前配置 1 分钟）后自动生效。
+
+# 生产环境 - 应用服务器
+- targets:
+    - "node1:9100"
+    - "node2:9100"
+    - "node3:9100"
+  labels:
+    env: "prod"
+    role: "application-server"
+    datacenter: "dc1"
+    team: "backend"
+
+# 生产环境 - 数据库服务器
+- targets:
+    - "node4:9100"
+    - "node5:9100"
+  labels:
+    env: "prod"
+    role: "database-server"
+    datacenter: "dc1"
+    team: "dba"
+
+# 开发环境
+- targets:
+    - "dev-node1:9100"
+  labels:
+    env: "dev"
+    role: "application-server"
+    datacenter: "dc2"
+    team: "backend"

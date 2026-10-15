@@ -1,0 +1,67 @@
+# Prometheus 配置文件
+# 按模块学习进度，取消对应配置的注释即可
+
+# ⚠️ 测试环境配置：采集间隔调小方便验证，生产环境建议 15s-60s
+global:
+  scrape_interval: 5s         # 采集间隔（测试 5s，生产建议 15s-60s）
+  evaluation_interval: 5s     # 规则评估间隔（测试 5s，生产建议 15s-60s）
+  scrape_timeout: 4s          # 采集超时时间（必须小于 scrape_interval）
+
+# ============================================
+# M4：告警规则文件（学习 M4 时取消注释）
+# ============================================
+rule_files:
+  - "04-alert-rules.yml"
+
+# ============================================
+# M4：Alertmanager 配置（学习 M4 时取消注释）
+# ============================================
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
+# 采集配置
+scrape_configs:
+  # ============================================
+  # M1：监控 Prometheus 自身（基础配置，必须保留）
+  # ============================================
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          env: "dev"
+          role: "monitoring"
+
+  # ============================================
+  # M3：监控 Node Exporter（Linux 系统指标）
+  # 已在 docker-compose.yml 中配置，直接取消注释即可
+  # 默认端口：9100
+  # ============================================
+  - job_name: "node"
+    static_configs:
+      - targets: ["node-exporter:9100"]
+        labels:
+          env: "dev"
+          role: "system-monitor"
+
+  # ============================================
+  # M5：服务发现（学习 M5 时了解概念即可）
+  # 完整配置示例见 05-service-discovery/prometheus.yml
+  # 包含三种方式：文件服务发现 / Consul / Kubernetes
+  # 学习阶段目标固定，使用 M3 的静态配置即可
+  # ============================================
+
+  # ============================================
+  # M6：监控 Spring Boot 应用（学习 M6 时取消注释）
+  # Spring Boot 应用在宿主机运行，Prometheus 通过 host.docker.internal 访问
+  # 默认端口：8080，指标端点：/actuator/prometheus
+  # ============================================
+  - job_name: "spring-boot-app"
+    metrics_path: "/actuator/prometheus"
+    scrape_interval: 5s       # 测试 5s，生产建议 15s-30s
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels:
+          env: "dev"
+          application: "order-service"
