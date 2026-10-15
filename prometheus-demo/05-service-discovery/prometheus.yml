@@ -1,0 +1,169 @@
+# M5：服务发现配置示例
+# 本文件展示三种服务发现方式的完整配置
+# 学习阶段只需掌握文件服务发现，其他两种了解概念即可
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # ============================================
+  # 方式一：文件服务发现（File-based SD）
+  # ============================================
+  #
+  # 【原理】
+  #   Prometheus 定期读取 YAML/JSON 文件，自动加载其中定义的监控目标。
+  #   修改文件后无需重启 Prometheus，refresh_interval 到期后自动生效。
+  #
+  # 【适用场景】
+  #   - 监控目标由其他系统（如 CMDB、部署脚本）写入文件
+  #   - 多个 Prometheus 实例共享同一份目标配置
+  #   - 目标变化不频繁，但希望避免重启
+  #
+  # 【关键参数】
+  #   files:            目标文件路径，支持通配符（如 targets/*.yml）
+  #   refresh_interval: 文件刷新间隔，建议 1-5 分钟
+  #                     太短会增加磁盘 IO，太长会导致新目标上线延迟
+  #
+  # 【目标文件格式】
+  #   见 targets/nodes.yml，格式要求：
+  #   - targets: 目标地址列表（IP:端口 或 主机名:端口）
+  #   - labels:  附加标签，会合并到该组目标的每个指标上
+  #
+  # 【本项目用法】
+  #   取消下方注释后，执行 docker-compose restart prometheus 即可生效。
+  #   修改 targets/nodes.yml 中的目标，等待 refresh_interval 后在 UI 查看变化。
+  # ============================================
+  - job_name: "file_sd_nodes"
+    file_sd_configs:
+      - files:
+          - "targets/nodes.yml"
+        refresh_interval: 1m
+
+  # 也支持通配符匹配多个文件，按子目录组织不同环境/团队的目标
+  # - job_name: "file_sd_all"
+  #   file_sd_configs:
+  #     - files:
+  #         - "targets/**/*.yml"
+  #       refresh_interval: 2m
+
+  # ============================================
+  # 方式二：Consul 服务发现（Consul SD）
+  # ============================================
+  #
+  # 【原理】
+  #   Consul 是 HashiCorp 的服务注册与发现工具。
+  #   服务启动时注册到 Consul，停止时自动注销。
+  #   Prometheus 定期查询 Consul HTTP API，获取当前健康的服务实例列表。
+  #
+  # 【适用场景】
+  #   - 微服务架构，服务实例动态注册/注销
+  #   - 已有 Consul 作为服务注册中心（很多公司用 Consul 做配置中心+服务发现）
+  #   - 需要健康检查：Consul 会自动剔除不健康的实例
+  #
+  # 【关键参数】
+  #   server:       Consul 地址（默认 8500 端口）
+  #   datacenter:   数据中心名称
+  #   services:     要发现的服务名列表（对应服务注册时的 name）
+  #   tags:         按标签过滤（如只采集 prod 环境的实例）
+  #   token:        ACL Token（开启 Consul 认证时需要）
+  #
+  # 【自动生成的标签】
+  #   __meta_consul_service:    服务名（如 node-exporter）
+  #   __meta_consul_node:       Consul 节点名
+  #   __meta_consul_tags:       标签列表（逗号分隔）
+  #   __meta_consul_address:    实例 IP
+  #   __meta_consul_dc:         数据中心
+  #   这些标签可通过 relabel_configs 转换为正式标签
+  #
+  # 【本项目说明】
+  #   学习阶段不部署 Consul，此配置仅供了解格式。
+  #   生产环境中，如果已有 Consul 集群，只需将 server 改为实际地址即可。
+  # ============================================
+  # - job_name: "consul_services"
+  #   consul_sd_configs:
+  #     - server: "consul:8500"
+  #       datacenter: "dc1"
+  #       services:
+  #         - "node-exporter"
+  #         - "mysql-exporter"
+  #       tags:
+  #         - "prod"
+  #   relabel_configs:
+  #     # 只保留带 prod 标签的实例
+  #     - source_labels: ["__meta_consul_tags"]
+  #       regex: ".*,prod,.*"
+  #       action: keep
+  #     # 用 Consul 服务名替换 job 标签
+  #     - source_labels: ["__meta_consul_service"]
+  #       target_label: "job"
+  #     # 用 Consul 节点名替换 instance 标签
+  #     - source_labels: ["__meta_consul_node"]
+  #       target_label: "instance"
+
+  # ============================================
+  # 方式三：Kubernetes 服务发现（Kubernetes SD）
+  # ============================================
+  #
+  # 【原理】
+  #   Prometheus 通过 Kubernetes API 自动发现集群中的资源（Pod、Service、Node 等）。
+  #   当 Pod 创建/销毁时，Prometheus 自动调整采集目标，无需任何配置变更。
+  #
+  # 【适用场景】
+  #   - Kubernetes 集群环境（几乎是 K8s 监控的标准方案）
+  #   - Pod IP 频繁变化，手动配置不现实
+  #   - 需要按 namespace、label、annotation 灵活筛选目标
+  #
+  # 【关键参数】
+  #   role:           发现角色，可选 pod / service / endpoints / node / ingress
+  #   namespaces:     限定发现的命名空间（不填则发现所有 namespace）
+  #
+  # 【常用注解约定】（需在 Pod/Service 上配置）
+  #   prometheus.io/scrape: "true"    是否采集该目标的指标
+  #   prometheus.io/port: "8080"      采集端口
+  #   prometheus.io/path: "/metrics"  采集路径
+  #
+  # 【自动生成的标签】（以 pod role 为例）
+  #   __meta_kubernetes_pod_name:                  Pod 名称
+  #   __meta_kubernetes_namespace:                  命名空间
+  #   __meta_kubernetes_pod_ip:                     Pod IP
+  #   __meta_kubernetes_pod_annotation_*:           所有注解
+  #   __meta_kubernetes_pod_label_*:                所有标签
+  #   __meta_kubernetes_pod_container_name:         容器名
+  #
+  # 【本项目说明】
+  #   学习阶段使用 Docker 环境，不部署 Kubernetes，此配置仅供了解格式。
+  #   生产环境中，Prometheus 通常部署在 K8s 集群内，通过 ServiceAccount 访问 API。
+  # ============================================
+  # - job_name: "kubernetes-pods"
+  #   kubernetes_sd_configs:
+  #     - role: pod
+  #       namespaces:
+  #         names:
+  #           - "default"
+  #           - "monitoring"
+  #   relabel_configs:
+  #     # 只采集标注了 prometheus.io/scrape=true 的 Pod
+  #     - source_labels: ["__meta_kubernetes_pod_annotation_prometheus_io_scrape"]
+  #       action: keep
+  #       regex: true
+  #     # 使用自定义 metrics 路径
+  #     - source_labels: ["__meta_kubernetes_pod_annotation_prometheus_io_path"]
+  #       action: replace
+  #       target_label: __metrics_path__
+  #       regex: (.+)
+  #     # 使用自定义端口拼接 Pod IP
+  #     - source_labels:
+  #         - "__meta_kubernetes_pod_annotation_prometheus_io_port"
+  #         - "__meta_kubernetes_pod_ip"
+  #       action: replace
+  #       regex: (\d+);([^:]+)(?::\d+)?
+  #       replacement: ${2}:${1}
+  #       target_label: __address__
+  #     # 将 K8s 元信息转为正式标签，方便 PromQL 查询时过滤
+  #     - source_labels: ["__meta_kubernetes_namespace"]
+  #       target_label: "namespace"
+  #     - source_labels: ["__meta_kubernetes_pod_name"]
+  #       target_label: "pod"
+  #     - source_labels: ["__meta_kubernetes_pod_label_app"]
+  #       target_label: "app"

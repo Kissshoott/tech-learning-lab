@@ -1,0 +1,33 @@
+# Alertmanager 配置文件
+# 按模块学习进度，取消对应配置的注释即可
+
+# 全局配置
+global:
+  resolve_timeout: 5m           # 告警恢复超时时间
+
+# 告警路由配置
+route:
+  group_by: ['alertname']       # 按告警名称分组
+  group_wait: 30s               # 同组告警等待时间
+  group_interval: 5m            # 同组告警发送间隔
+  repeat_interval: 4h           # 重复告警发送间隔
+  receiver: 'default-receiver'  # 默认接收器
+
+# 接收器配置
+receivers:
+  - name: 'default-receiver'
+    # 学习阶段：使用飞书中转服务
+    # 1. 修改 feishu-webhook.py 中的 FEISHU_WEBHOOK 为你的飞书机器人地址
+    # 2. 启动中转服务：python feishu-webhook.py
+    # 3. 配置 webhook 指向中转服务
+    webhook_configs:
+      - url: 'http://host.docker.internal:5001/alert'
+        send_resolved: true
+
+# 抑制规则（可选）
+# inhibit_rules:
+#   - source_match:
+#       severity: 'critical'
+#     target_match:
+#       severity: 'warning'
+#     equal: ['alertname', 'instance']

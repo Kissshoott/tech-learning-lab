@@ -1,0 +1,152 @@
+# PromQL 查询示例
+# 对应教学文档 M2：PromQL 查询语言
+
+# ============================================
+# 基础查询
+# ============================================
+
+# 查询所有指标
+{__name__=~".+"}
+
+# 查询特定指标
+http_requests_total
+node_cpu_seconds_total
+up
+
+# 按标签过滤
+http_requests_total{method="GET"}
+http_requests_total{method="GET", status="200"}
+node_cpu_seconds_total{mode="idle", cpu="0"}
+
+# 标签正则匹配
+http_requests_total{method=~"GET|POST"}
+http_requests_total{method!~"DELETE"}
+node_cpu_seconds_total{mode=~"idle|user"}
+
+# 范围向量（查询最近5分钟的数据）
+http_requests_total[5m]
+node_cpu_seconds_total[10m]
+
+# ============================================
+# 聚合操作
+# ============================================
+
+# sum：求和
+sum(http_requests_total)
+sum by (method) (http_requests_total)
+sum without (instance) (http_requests_total)
+
+# avg：平均值
+avg(node_cpu_seconds_total{mode="idle"})
+avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m]))
+
+# rate：计算每秒增长率（最常用，用于 counter 类型）
+rate(http_requests_total[5m])
+rate(node_cpu_seconds_total{mode="user"}[5m])
+
+# increase：计算增长量
+increase(http_requests_total[1h])
+increase(http_requests_total[5m])
+
+# histogram_quantile：计算分位数
+histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
+histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))
+histogram_quantile(0.50, rate(http_request_duration_seconds_bucket[5m]))
+
+# ============================================
+# 系统指标查询
+# ============================================
+
+# CPU 使用率（单核）
+100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+# CPU 使用率（多核平均）
+100 - (avg by (instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+
+# 内存使用率
+(1 - node_memory_available_bytes / node_memory_total_bytes) * 100
+
+# 磁盘使用率
+(1 - node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100
+
+# 磁盘读取速率
+rate(node_disk_read_bytes_total[5m])
+
+# 磁盘写入速率
+rate(node_disk_written_bytes_total[5m])
+
+# 网络接收速率
+rate(node_network_receive_bytes_total{device="eth0"}[5m])
+
+# 网络发送速率
+rate(node_network_transmit_bytes_total{device="eth0"}[5m])
+
+# 系统负载
+node_load1
+node_load5
+node_load15
+
+# ============================================
+# 应用指标查询
+# ============================================
+
+# HTTP QPS（每秒请求数）
+sum(rate(http_requests_total[5m]))
+sum by (method) (rate(http_requests_total[5m]))
+sum by (status) (rate(http_requests_total[5m]))
+
+# HTTP 平均响应时间
+sum(rate(http_request_duration_seconds_sum[5m])) / sum(rate(http_request_duration_seconds_count[5m]))
+
+# HTTP 错误率
+sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) * 100
+
+# JVM 堆内存使用率
+jvm_memory_used_bytes{area="heap"} / jvm_memory_max_bytes{area="heap"} * 100
+
+# JVM GC 次数
+rate(jvm_gc_pause_seconds_count[5m])
+
+# JVM GC 耗时
+rate(jvm_gc_pause_seconds_sum[5m])
+
+# ============================================
+# 数学运算
+# ============================================
+
+# 加减乘除
+http_requests_total * 100
+node_memory_free_bytes / node_memory_total_bytes * 100
+
+# 比较运算
+node_cpu_seconds_total > 0.8
+http_requests_total > 1000
+
+# 逻辑运算
+node_cpu_seconds_total > 0.8 and node_load1 > 2
+up == 0 or node_cpu_seconds_total > 0.9
+
+# ============================================
+# 时间函数
+# ============================================
+
+# 当前时间戳
+time()
+
+# 样本的时间戳
+timestamp(http_requests_total)
+
+# 提取时间部分
+hour(timestamp(http_requests_total))
+minute(timestamp(http_requests_total))
+day_of_week(timestamp(http_requests_total))
+
+# ============================================
+# 标签操作
+# ============================================
+
+# label_replace：替换标签值
+label_replace(http_requests_total, "new_label", "$1", "old_label", "(.*)")
+
+# label_join：拼接标签
+label_join(http_requests_total, "combined", "-", "method", "status")
